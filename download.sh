@@ -8,6 +8,6 @@ mv VQAR_code/Scallop .
 rm -rf VQAR_code
 rm -rf VQAR_code.zip
 cd VQAR
-wget https://zenodo.org/record/4527767/files/data.zip
+wget https://zenodo.org/record/4535747/files/data.zip
 unzip data.zip
 rm -rf data.zip
