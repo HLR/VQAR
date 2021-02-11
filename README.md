@@ -1,3 +1,6 @@
+## Prerequiste
+We assume you have at least one GPU
+
 ## 1. Download
 To download the resources.
 ```
