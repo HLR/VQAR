@@ -254,6 +254,52 @@ class SolverModel(PoiModel):
     def populate(self, builder, run=True):
         data_item = self.inference(builder)
         return super().populate(builder, run=False)
+
+
+### chen begin List POI
+##### two places that required to changes: inference and populate
+##### what is the meaning of builder here?
+class SolverListPOIModel(PoiModel):
+    def __init__(self, graph, list_poi=None, loss=None, metric=None, inferTypes=None, inference_with = None, device='auto'):
+        super().__init__(graph, list_poi=list_poi, loss=loss, metric=metric, device=device)
+        
+        if inferTypes == None:
+            self.inferTypes = ['ILP']
+        else:
+            self.inferTypes = inferTypes
+            
+        if inference_with == None:
+            self.inference_with = []
+        else:
+            self.inference_with = inference_with
+
+    def inference(self, builder, examples):
+        for example_index in range(len(examples)):
+            for prop in self.poi[example_index]:
+                for sensor in prop.find(TorchSensor):
+                    sensor(builder)
+
+        # Check if this is batch
+        if (builder.needsBatchRootDN()):
+            builder.addBatchRootDN()
+        datanode = builder.getDataNode(device=self.device)
+        # trigger inference
+#         fun=lambda val: torch.tensor(val, dtype=float).softmax(dim=-1).detach().cpu().numpy().tolist()
+        for infertype in self.inferTypes:
+            {
+                'ILP': lambda :datanode.inferILPResults(*self.inference_with, fun=None, epsilon=None),
+                'local/argmax': lambda :datanode.inferLocal(),
+                'local/softmax': lambda :datanode.inferLocal(),
+                'argmax': lambda :datanode.infer(),
+                'softmax': lambda :datanode.infer(),
+            }[infertype]()
+#         print("Done with the inference")
+        return builder
+
+    def populate(self, builder, run=True):
+        data_item = self.inference(builder)
+        return super().populate(builder, run=False)
+### chen end
     
 
 class PoiModelToWorkWithLearnerWithLoss(TorchModel):

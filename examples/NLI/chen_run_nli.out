@@ -1,0 +1,15 @@
+Log file for dataNode is in: /localscratch/chen.zheng/codes/python_codes/domi_vqar/VQAR/examples/NLI/logs/datanode.log
+Traceback (most recent call last):
+  File "main.py", line 107, in <module>
+    main(args)
+  File "main.py", line 68, in main
+    model = program_declaration()
+  File "main.py", line 51, in program_declaration
+    program = SolverListPOIProgram(graph, inferTypes=['ILP', 'local/argmax'], list_poi=list_poi,
+  File "../../regr/program/model_program.py", line 18, in __init__
+    super().__init__(graph, SolverListPOIModel, **kwargs)
+  File "../../regr/program/program.py", line 174, in __init__
+    self.model = Model(graph, **modelKwargs)
+  File "../../regr/program/model/pytorch.py", line 264, in __init__
+    super().__init__(graph, list_poi=list_poi, loss=loss, metric=metric, device=device)
+TypeError: __init__() got an unexpected keyword argument 'list_poi'
