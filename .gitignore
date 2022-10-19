@@ -1,1 +1,5 @@
 VQAR_all
+logs
+*.tar.gz
+.log
+__pycache__

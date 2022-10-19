@@ -7,8 +7,15 @@ sys.path.append('../')
 from regr.graph import Graph, Concept, Relation
 from regr.graph.logicalConstrain import orL, andL, existsL, notL, atLeastL, atMostL, ifL, V, nandL
 
-from image_bounding_box_labels import faster_rcnn_bounding_box_labels
-from internal_external_rel import internal_external_knowledge_rel
+import json
+
+### contains all entities, include object class entities and the external source of knowledge graph (conceptnet) entities.
+f_entity = open('../feature_file/entity2id_new2.json')
+faster_rcnn_bounding_box_labels = json.load(f_entity)
+
+### contains the relations between the object class objects and the conceptnet concepts
+f_rel = open('../feature_file/entity_rel.json')
+internal_external_knowledge_rel = json.load(f_rel)
 
 Graph.clear()
 Concept.clear()
@@ -18,14 +25,10 @@ with Graph('vqar_concept') as graph:
     image = Concept(name='image')
     bounding_box = Concept(name='bounding_box')
 
-    ### all bounding box labels as concept name
-    ### not very correct here.
-    ### now I have all of the concepts from the boundingbox,
-    ### however, i also require add all of the entity from the conceptnet into the concept graph.
+    ### all bounding box labels and the selected external knowledge entities as concept names
     for index, data in enumerate(faster_rcnn_bounding_box_labels):
         try:
             locals()[data] = bounding_box(name=data)
-            # print(locals()[data], index)
         except:
             pass
 
@@ -34,24 +37,22 @@ with Graph('vqar_concept') as graph:
     image.contains(bounding_box)
 
     ## constraint: is_a relation (concept1, concept2)  for example: is_a (mammal, animal)
-    # ifL(pig('x'), mammal('x'))
-    # ifL(mammal('x'), animal('x'))
-    for key, value in internal_external_knowledge_rel.items():
-        locals()[key].is_a(locals()[value])
-        ifL(locals()[key]('x'), locals()[value]('x'))
-
-    ## use python graph library to find the following path given a->b. then i will have a->c ### next step
-    # ifL(cat('x'), animal('x'))
+    # if logic (is_a constraint) example1: ifL(pig('x'), mammal('x'))
+    # if logic (is_a constraint) example2: ifL(mammal('x'), animal('x'))
+    for key, value_list in internal_external_knowledge_rel.items(): ### key: string  value: list
+        for value in value_list:
+            # locals()[key].is_a(locals()[value])
+            ifL(locals()[key]('x'), locals()[value]('x'))
 
 
-    # graph.visualize('somewhere.png')
-    graph.generate_graphviz_dot('vqar')
+    # # graph.visualize('somewhere.png')
+    # graph.generate_graphviz_dot('vqar')
 
     # dot -Tsvg vqar.dot -o output_img.svg ### use command line
-    import os
-    os.system('dot -Tsvg vqar.dot -o output_img.svg')
-    os.system('rm vqar')
-    os.system('rm vqar.dot')
-    print('Successfully generate the Concept Graph!')
+    # import os
+    # os.system('dot -Tsvg vqar.dot -o output_img.svg')
+    # os.system('rm vqar')
+    # os.system('rm vqar.dot')
+    # print('Successfully generate the Concept Graph!')
 
 
