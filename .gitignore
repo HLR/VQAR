@@ -3,3 +3,6 @@ logs
 *.tar.gz
 .log
 __pycache__
+data
+*.jsonl
+*.csv

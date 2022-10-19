@@ -259,6 +259,7 @@ class SolverModel(PoiModel):
 ### chen begin List POI
 ##### two places that required to changes: inference and populate
 ##### what is the meaning of builder here?
+##### sensor(builder)?
 class SolverListPOIModel(PoiModel):
     def __init__(self, graph, list_poi=None, loss=None, metric=None, inferTypes=None, inference_with = None, device='auto'):
         super().__init__(graph, list_poi=list_poi, loss=loss, metric=metric, device=device)

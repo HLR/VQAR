@@ -1,0 +1,77 @@
+./graph/allennlp/utils.py:294:    for prop in graph.poi:
+./graph/allennlp/base.py:63:    def poi(self):
+./graph/allennlp/model.py:90:        for prop in self.graph.poi:
+./graph/allennlp/model.py:106:        for prop in self.graph.poi:
+./graph/allennlp/model.py:225:        for prop in self.graph.poi:
+./graph/allennlp/model.py:253:        for prop in self.graph.poi:
+./graph/allennlp/model.py:289:        for prop in self.graph.poi:
+Binary file ./program/__pycache__/model_program.cpython-39.pyc matches
+Binary file ./program/__pycache__/model_program.cpython-38.pyc matches
+Binary file ./program/model/__pycache__/iml.cpython-38.pyc matches
+Binary file ./program/model/__pycache__/iml.cpython-39.pyc matches
+Binary file ./program/model/__pycache__/pytorch.cpython-38.pyc matches
+Binary file ./program/model/__pycache__/ilpu.cpython-38.pyc matches
+Binary file ./program/model/__pycache__/ilpu.cpython-39.pyc matches
+Binary file ./program/model/__pycache__/pytorch.cpython-39.pyc matches
+./program/model/torch.py:65:        self.poi = {prop: (output_sensor, target_sensor) for prop, output_sensor, target_sensor in self.find_poi()}
+./program/model/torch.py:66:        self.graph.poi = self.poi
+./program/model/torch.py:71:    def find_poi(self):
+./program/model/torch.py:90:    def poi_loss(self, data_item, prop, output_sensor, target_sensor):
+./program/model/torch.py:100:    def poi_metric(self, data_item, prop, output_sensor, target_sensor):
+./program/model/torch.py:115:        for prop, (output_sensor, target_sensor) in self.poi.items():
+./program/model/torch.py:120:            loss += self.poi_loss(data_item, prop, output_sensor, target_sensor)
+./program/model/torch.py:121:            metric[output_sensor, target_sensor] = self.poi_metric(data_item, prop, output_sensor, target_sensor)
+./program/model/pytorch.py:112:    def __init__(self, graph, poi=None, loss=None, metric=None, device='auto'):
+./program/model/pytorch.py:114:        if poi is None:
+./program/model/pytorch.py:115:            self.poi = self.default_poi()
+./program/model/pytorch.py:118:            for item in poi:
+./program/model/pytorch.py:126:            self.poi = properties
+./program/model/pytorch.py:135:    def default_poi(self):
+./program/model/pytorch.py:136:        poi = []
+./program/model/pytorch.py:139:                poi.append(prop)
+./program/model/pytorch.py:140:        return poi
+./program/model/pytorch.py:166:    def poi_loss(self, data_item, prop, sensors):
+./program/model/pytorch.py:175:    def poi_metric(self, data_item, prop, sensors):
+./program/model/pytorch.py:193:        for prop in self.poi:
+./program/model/pytorch.py:203:                        local_loss = self.poi_loss(builder, prop, sensors)
+./program/model/pytorch.py:207:                        local_metric = self.poi_metric(builder, prop, sensors)
+./program/model/pytorch.py:214:    def __init__(self, graph, poi=None, loss=None, metric=None, inferTypes=None, inference_with = None, device='auto'):
+./program/model/pytorch.py:215:        super().__init__(graph, poi=poi, loss=loss, metric=metric, device=device)
+./program/model/pytorch.py:228:        for prop in self.poi:
+./program/model/pytorch.py:264:    def __init__(self, graph, list_poi=None, loss=None, metric=None, inferTypes=None, inference_with = None, device='auto'):
+./program/model/pytorch.py:265:        super().__init__(graph, list_poi=list_poi, loss=loss, metric=metric, device=device)
+./program/model/pytorch.py:279:            for prop in self.poi[example_index]:
+./program/model/pytorch.py:307:    def __init__(self, graph, poi=None, device='auto'):
+./program/model/pytorch.py:309:        if poi is not None:
+./program/model/pytorch.py:310:            self.poi = poi
+./program/model/pytorch.py:312:            self.poi = self.default_poi()
+./program/model/pytorch.py:322:    def default_poi(self):
+./program/model/pytorch.py:323:        poi = []
+./program/model/pytorch.py:326:                poi.append(prop)
+./program/model/pytorch.py:327:        return poi
+./program/model/pytorch.py:332:        for prop in self.poi:
+./program/model/pytorch.py:367:    def __init__(self, graph, poi=None, loss=None, metric=None, dictloss=None, device='auto'):
+./program/model/pytorch.py:370:            super().__init__(graph, poi=poi, loss=self.loss_tracker, metric=metric, device=device)
+./program/model/pytorch.py:372:            super().__init__(graph, poi=poi, loss=loss, metric=metric, device=device)
+./program/model/pytorch.py:392:    def poi_loss(self, data_item, prop, sensors):
+./program/model/pytorch.py:417:            super().poi_loss(data_item, prop, sensors)
+./program/model/pytorch.py:432:#     def __init__(self, graph, poi=None, loss=None, metric=None):
+./program/model/pytorch.py:434:#         if poi is None:
+./program/model/pytorch.py:435:#             self.poi = self.default_poi()
+./program/model/pytorch.py:438:#             for item in poi:
+./program/model/pytorch.py:446:#             self.poi = properties
+./program/model/pytorch.py:465:#     def default_poi(self):
+./program/model/pytorch.py:466:#         poi = []
+./program/model/pytorch.py:469:#                 poi.append(prop)
+./program/model/pytorch.py:470:#         return poi
+./program/model/pytorch.py:476:#         for prop in self.poi:
+./program/model/pytorch.py:513:    def __init__(self, graph, poi=None, loss=None, metric=None, dictloss=None, inferTypes=['ILP'], device='auto'):
+./program/model/pytorch.py:514:        super().__init__(graph, poi=poi, loss=loss, metric=metric, dictloss=dictloss, device=device)
+./program/model/pytorch.py:519:        for prop in self.poi:
+./program/model/ilpu.py:10:    def poi_loss(self, data_item, prop, sensors):
+./program/model/iml.py:10:    def poi_loss(self, data_item, prop, sensors):
+./program/model_program.py:33:    def __init__(self, graph, poi=None):
+./program/model_program.py:34:        super().__init__(graph, PoiModelToWorkWithLearnerWithLoss, poi=poi)
+./solver/allennlpInferenceSolver.py:36:        for prop in graph.poi:
+./solver/contextsolver/pytorch.py:19:        output_sensor, _ = graph.poi[prop]
+./solver/allennlplogInferenceSolver.py:36:        for prop in graph.poi:
