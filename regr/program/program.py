@@ -290,15 +290,15 @@ class LearningBasedProgram():
                 loss.backward()
                 self.opt.step()
             yield (loss, metric, *output[:1])
-
+    
     def test(self, dataset, device=None, **kwargs):
         if device is not None:
             self.to(device)
         self.call_epoch('Testing', dataset, self.test_epoch, **kwargs)
 
     def test_epoch(self, dataset):
-        self.model.mode(Mode.TEST)
-        self.model.reset()
+        # self.model.mode(Mode.TEST)
+        # self.model.reset()
         with torch.no_grad():
             for data_item in dataset:
                 loss, metric, *output = self.model(data_item)

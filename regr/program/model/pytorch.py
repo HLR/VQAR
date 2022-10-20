@@ -81,6 +81,9 @@ class TorchModel(torch.nn.Module):
                 data_item = dict((k, v) for k, v in enumerate(data_item))
             else:
                 data_item = {None: data_item}
+        data_item_used_poi = data_item['poi']
+        # print('====================================================================================')
+        # print('text: ', data_item['text'], ' poi for this example: ', data_item_used_poi)
         data_item = self.move(data_item)
 
         for sensor in self.graph.get_sensors(CacheSensor, lambda s: s.cache):
@@ -93,7 +96,15 @@ class TorchModel(torch.nn.Module):
             builder = DataNodeBuilder(data_item)
             if (builder.needsBatchRootDN()):
                 builder.addBatchRootDN()
-            *out, = self.populate(builder)
+            ### chen add if-else condition
+            if 'poi' not in data_item:
+                *out, = self.populate(builder)
+            else:
+                # print('--------------')
+                # print(data_item)
+                # print('--------------')
+                *out, = self.populate(builder, poi=data_item_used_poi)
+
             datanode = builder.getDataNode(device=self.device)
             return (*out, datanode, builder)
         else:
@@ -111,6 +122,7 @@ def model_helper(Model, *args, **kwargs):
 class PoiModel(TorchModel):
     def __init__(self, graph, poi=None, loss=None, metric=None, device='auto'):
         super().__init__(graph, device)
+
         if poi is None:
             self.poi = self.default_poi()
         else:
@@ -209,6 +221,119 @@ class PoiModel(TorchModel):
                             metric[(*sensors,)] = local_metric
                             
         return loss, metric
+
+
+
+### chen begin List POI
+class ListPoiModel(TorchModel):
+    def __init__(self, graph, loss=None, metric=None, device='auto'):
+        super().__init__(graph, device)
+        self.loss = loss
+        if metric is None:
+            self.metric = None
+        elif isinstance(metric, dict):
+            self.metric = metric
+        else:
+            self.metric = {'': metric}
+
+    def default_poi(self):
+        poi = []
+        for prop in self.graph.get_properties():
+            if len(list(prop.find(TorchSensor))) > 1:
+                poi.append(prop)
+        return poi
+    
+    def set_list_poi(self, poi):
+        poi = [] ## read the poi from reader
+        return poi
+
+    def find_sensors(self, prop):
+        for sensor1, sensor2 in combinations(prop.find(TorchSensor), r=2):
+            if sensor1.label:
+                target_sensor = sensor1
+                output_sensor = sensor2
+            elif sensor2.label:
+                target_sensor = sensor2
+                output_sensor = sensor1
+            else:
+                # TODO: should different learners get closer?
+                continue
+            if output_sensor.label:
+                # two targets, skip
+                continue
+            yield output_sensor, target_sensor
+
+    def reset(self):
+        if isinstance(self.loss, MetricTracker):
+            self.loss.reset()
+        if self.metric is not None:
+            for metric in self.metric.values():
+                if isinstance(metric, MetricTracker):
+                    metric.reset()
+
+    def poi_loss(self, data_item, prop, sensors):
+        if not self.loss:
+            return 0
+        outs = [sensor(data_item) for sensor in sensors]
+        if len(outs[0]) == 0:
+            return None
+        local_loss = self.loss[(*sensors,)](*outs)
+        return local_loss
+
+    def poi_metric(self, data_item, prop, sensors):
+        if not self.metric:
+            return None
+        outs = [sensor(data_item) for sensor in sensors]
+        if len(outs[0]) == 0:
+            return None
+        local_metric = {}
+        for key, metric in self.metric.items():
+            local_metric[key] = metric[(*sensors,)](*outs, data_item=data_item, prop=prop)
+        if len(local_metric) == 1:
+            local_metric = list(local_metric.values())[0]
+            
+        return local_metric
+
+    def populate(self, builder, poi, run=True):
+        print(poi)
+        if poi is None:
+            self.poi = self.default_poi()
+        else:
+            properties = []
+            for item in poi:
+                if isinstance(item, Property):
+                    properties.append(item)
+                elif isinstance(item, Concept):
+                    for prop in item.values():
+                        properties.append(prop)
+                else:
+                    raise ValueError(f'Unexpected type of POI item {type(item)}: Property or Concept expected.')
+            self.poi = properties
+
+        loss = 0
+        metric = {}
+        
+        for prop in self.poi:
+            # make sure the sensors are evaluated
+            if run:
+                for sensor in prop.find(TorchSensor):
+                    sensor(builder)
+                    
+            for sensors in self.find_sensors(prop):
+                if self.mode() not in {Mode.POPULATE,}:
+                    # calculated any loss or metric
+                    if self.loss is not None:
+                        local_loss = self.poi_loss(builder, prop, sensors)
+                        if local_loss is not None:
+                            loss += local_loss
+                    if self.metric:
+                        local_metric = self.poi_metric(builder, prop, sensors)
+                        if local_metric is not None:
+                            metric[(*sensors,)] = local_metric
+                            
+        return loss, metric
+
+
 
 class SolverModel(PoiModel):
     def __init__(self, graph, poi=None, loss=None, metric=None, inferTypes=None, inference_with = None, device='auto'):
