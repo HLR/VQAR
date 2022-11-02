@@ -103,11 +103,13 @@ SAMPLE3 = {
 }
 
 reader = [SAMPLE1, SAMPLE2, SAMPLE3]
+# reader = [SAMPLE1, SAMPLE2]
 
 
 
 # Defined the program
 # program = POIProgram(graph, poi=[pair[work_for]],loss=MacroAverageTracker(NBCrossEntropyLoss()), metric=PRF1Tracker())
+# program = POIProgram(graph, loss=MacroAverageTracker(NBCrossEntropyLoss()), metric=PRF1Tracker())
 program = ListPOIProgram(graph, poi=None, loss=MacroAverageTracker(NBCrossEntropyLoss()), metric=PRF1Tracker(), list_poi=True)
 
 # device options are 'cpu', 'cuda', 'cuda:x', torch.device instance, 'auto', None
@@ -118,7 +120,7 @@ device = 'auto'
 
 
 # Train
-program.train(reader, train_epoch_num=10, Optim=torch.optim.Adam, device=device)
+program.train(reader, train_epoch_num=5, Optim=torch.optim.Adam, device=device)
 print('Training result:')
 print(program.model.loss)
 print(program.model.metric)
