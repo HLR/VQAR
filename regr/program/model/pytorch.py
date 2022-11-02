@@ -22,6 +22,8 @@ class TorchModel(torch.nn.Module):
         self.build = True
         self.device = device
 
+        self.use_list_poi=False
+
         for learner in self.graph.get_sensors(TorchLearner):
             self.add_module(learner.fullname, learner.model)
 
@@ -81,9 +83,6 @@ class TorchModel(torch.nn.Module):
                 data_item = dict((k, v) for k, v in enumerate(data_item))
             else:
                 data_item = {None: data_item}
-        data_item_used_poi = data_item['poi']
-        # print('====================================================================================')
-        # print('text: ', data_item['text'], ' poi for this example: ', data_item_used_poi)
         data_item = self.move(data_item)
 
         for sensor in self.graph.get_sensors(CacheSensor, lambda s: s.cache):
@@ -96,15 +95,7 @@ class TorchModel(torch.nn.Module):
             builder = DataNodeBuilder(data_item)
             if (builder.needsBatchRootDN()):
                 builder.addBatchRootDN()
-            ### chen add if-else condition
-            if 'poi' not in data_item:
-                *out, = self.populate(builder)
-            else:
-                # print('--------------')
-                # print(data_item)
-                # print('--------------')
-                *out, = self.populate(builder, poi=data_item_used_poi)
-
+            *out, = self.populate(builder)
             datanode = builder.getDataNode(device=self.device)
             return (*out, datanode, builder)
         else:
@@ -199,6 +190,7 @@ class PoiModel(TorchModel):
         return local_metric
 
     def populate(self, builder, run=True):
+        self.use_list_poi=False
         loss = 0
         metric = {}
         
@@ -228,6 +220,7 @@ class PoiModel(TorchModel):
 class ListPoiModel(TorchModel):
     def __init__(self, graph, loss=None, metric=None, device='auto'):
         super().__init__(graph, device)
+
         self.loss = loss
         if metric is None:
             self.metric = None
@@ -293,8 +286,54 @@ class ListPoiModel(TorchModel):
             local_metric = list(local_metric.values())[0]
             
         return local_metric
+    
+    def forward(self, data_item, build=None):
+        if build is None:
+            build = self.build
+        data_hash = None
+        if not isinstance(data_item, dict):
+            if isinstance(data_item, Iterable):
+                data_item = dict((k, v) for k, v in enumerate(data_item))
+            else:
+                data_item = {None: data_item}
+        if 'poi' in data_item:
+            data_item_used_poi = data_item['poi']
+        else:
+            data_item_used_poi = None
+        # print('====================================================================================')
+        # print('text: ', data_item['text'], ' poi for this example: ', data_item_used_poi)
+        data_item = self.move(data_item)
+
+        for sensor in self.graph.get_sensors(CacheSensor, lambda s: s.cache):
+            data_hash = data_hash or self.data_hash(data_item)
+            sensor.fill_hash(data_hash)
+        for sensor in self.graph.get_sensors(ReaderSensor):
+            sensor.fill_data(data_item)
+        if build:
+            data_item.update({"graph": self.graph, 'READER': 0})
+            builder = DataNodeBuilder(data_item)
+            if (builder.needsBatchRootDN()):
+                builder.addBatchRootDN()
+            ### chen add if-else condition
+            if 'poi' not in data_item:
+                *out, = self.populate(builder)
+            else:
+                # print('--------------')
+                # print(data_item)
+                # print('--------------')
+                if 'poi' in data_item:
+                    *out, = self.populate(builder, poi=data_item_used_poi)
+                else:
+                    *out, = self.populate(builder)
+
+            datanode = builder.getDataNode(device=self.device)
+            return (*out, datanode, builder)
+        else:
+            *out, = self.populate(data_item)
+            return (*out,)
 
     def populate(self, builder, poi, run=True):
+        self.use_list_poi=True
         print(poi)
         if poi is None:
             self.poi = self.default_poi()
