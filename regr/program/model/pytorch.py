@@ -438,26 +438,6 @@ class SolverListPOIModel(PoiModel):
         else:
             self.inference_with = inference_with
 
-#     def inference(self, builder, examples):
-#         for example_index in range(len(examples)):
-#             for prop in self.poi[example_index]:
-#                 for sensor in prop.find(TorchSensor):
-#                     sensor(builder)
-
-#         if (builder.needsBatchRootDN()):
-#             builder.addBatchRootDN()
-#         datanode = builder.getDataNode(device=self.device)
-#         # trigger inference
-# #         fun=lambda val: torch.tensor(val, dtype=float).softmax(dim=-1).detach().cpu().numpy().tolist()
-#         for infertype in self.inferTypes:
-#             {
-#                 'ILP': lambda :datanode.inferILPResults(*self.inference_with, fun=None, epsilon=None),
-#                 'local/argmax': lambda :datanode.inferLocal(),
-#                 'local/softmax': lambda :datanode.inferLocal(),
-#                 'argmax': lambda :datanode.infer(),
-#                 'softmax': lambda :datanode.infer(),
-#             }[infertype]()
-#         return builder
     def inference(self, builder):
         for prop in self.poi:
             for sensor in prop.find(TorchSensor):
@@ -514,10 +494,6 @@ class SolverListPOIModel(PoiModel):
         else:
             *out, = self.populate(data_item)
             return (*out,)
-
-    # def populate(self, builder, run=True):
-    #     data_item = self.inference(builder)
-    #     return super().populate(builder, run=False)
 
     def populate(self, builder, poi, run=True):
         # self.use_list_poi=True
