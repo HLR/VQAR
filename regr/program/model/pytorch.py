@@ -420,13 +420,13 @@ class SolverModel(PoiModel):
         return super().populate(builder, run=False)
 
 
-### chen begin List POI
+
+### chen begin Solver List POI
 ##### two places that required to changes: inference and populate
 ##### what is the meaning of builder here?
-##### sensor(builder)?
 class SolverListPOIModel(PoiModel):
-    def __init__(self, graph, list_poi=None, loss=None, metric=None, inferTypes=None, inference_with = None, device='auto'):
-        super().__init__(graph, list_poi=list_poi, loss=loss, metric=metric, device=device)
+    def __init__(self, graph, loss=None, metric=None, inferTypes=None, inference_with = None, device='auto'):
+        super().__init__(graph, loss=loss, metric=metric, device=device)
         
         if inferTypes == None:
             self.inferTypes = ['ILP']
@@ -438,18 +438,34 @@ class SolverListPOIModel(PoiModel):
         else:
             self.inference_with = inference_with
 
-    def inference(self, builder, examples):
-        for example_index in range(len(examples)):
-            for prop in self.poi[example_index]:
-                for sensor in prop.find(TorchSensor):
-                    sensor(builder)
+#     def inference(self, builder, examples):
+#         for example_index in range(len(examples)):
+#             for prop in self.poi[example_index]:
+#                 for sensor in prop.find(TorchSensor):
+#                     sensor(builder)
 
-        # Check if this is batch
+#         if (builder.needsBatchRootDN()):
+#             builder.addBatchRootDN()
+#         datanode = builder.getDataNode(device=self.device)
+#         # trigger inference
+# #         fun=lambda val: torch.tensor(val, dtype=float).softmax(dim=-1).detach().cpu().numpy().tolist()
+#         for infertype in self.inferTypes:
+#             {
+#                 'ILP': lambda :datanode.inferILPResults(*self.inference_with, fun=None, epsilon=None),
+#                 'local/argmax': lambda :datanode.inferLocal(),
+#                 'local/softmax': lambda :datanode.inferLocal(),
+#                 'argmax': lambda :datanode.infer(),
+#                 'softmax': lambda :datanode.infer(),
+#             }[infertype]()
+#         return builder
+    def inference(self, builder):
+        for prop in self.poi:
+            for sensor in prop.find(TorchSensor):
+                sensor(builder)
+
         if (builder.needsBatchRootDN()):
             builder.addBatchRootDN()
         datanode = builder.getDataNode(device=self.device)
-        # trigger inference
-#         fun=lambda val: torch.tensor(val, dtype=float).softmax(dim=-1).detach().cpu().numpy().tolist()
         for infertype in self.inferTypes:
             {
                 'ILP': lambda :datanode.inferILPResults(*self.inference_with, fun=None, epsilon=None),
@@ -458,13 +474,79 @@ class SolverListPOIModel(PoiModel):
                 'argmax': lambda :datanode.infer(),
                 'softmax': lambda :datanode.infer(),
             }[infertype]()
-#         print("Done with the inference")
         return builder
 
-    def populate(self, builder, run=True):
-        data_item = self.inference(builder)
-        return super().populate(builder, run=False)
-### chen end
+    def forward(self, data_item, build=None):
+        if build is None:
+            build = self.build
+        data_hash = None
+        if not isinstance(data_item, dict):
+            if isinstance(data_item, Iterable):
+                data_item = dict((k, v) for k, v in enumerate(data_item))
+            else:
+                data_item = {None: data_item}
+        if 'poi' in data_item:
+            data_item_used_poi = data_item['poi']
+        else:
+            data_item_used_poi = None
+        data_item = self.move(data_item)
+
+        for sensor in self.graph.get_sensors(CacheSensor, lambda s: s.cache):
+            data_hash = data_hash or self.data_hash(data_item)
+            sensor.fill_hash(data_hash)
+        for sensor in self.graph.get_sensors(ReaderSensor):
+            sensor.fill_data(data_item)
+        if build:
+            data_item.update({"graph": self.graph, 'READER': 0})
+            builder = DataNodeBuilder(data_item)
+            if (builder.needsBatchRootDN()):
+                builder.addBatchRootDN()
+            if 'poi' not in data_item:
+                *out, = self.populate(builder)
+            else:
+                if 'poi' in data_item:
+                    *out, = self.populate(builder, poi=data_item_used_poi)
+                else:
+                    *out, = self.populate(builder)
+
+            datanode = builder.getDataNode(device=self.device)
+            return (*out, datanode, builder)
+        else:
+            *out, = self.populate(data_item)
+            return (*out,)
+
+    # def populate(self, builder, run=True):
+    #     data_item = self.inference(builder)
+    #     return super().populate(builder, run=False)
+
+    def populate(self, builder, poi, run=True):
+        # self.use_list_poi=True
+        # print('------------------------------new example------------------------------')
+        # print('For this training example, we randomly choose ', len(poi), '/10 poi. Here is the POIs we choose:', poi)
+        loss = 0
+        metric = {}
+        
+        # for prop in self.poi:
+        for prop in poi:
+            # make sure the sensors are evaluated
+            if run:
+                for sensor in prop.find(TorchSensor):
+                    sensor(builder)
+                    
+            for sensors in self.find_sensors(prop):
+                if self.mode() not in {Mode.POPULATE,}:
+                    # calculated any loss or metric
+                    if self.loss is not None:
+                        local_loss = self.poi_loss(builder, prop, sensors)
+                        if local_loss is not None:
+                            loss += local_loss
+                    if self.metric:
+                        local_metric = self.poi_metric(builder, prop, sensors)
+                        if local_metric is not None:
+                            metric[(*sensors,)] = local_metric
+                            
+        return loss, metric
+
     
 
 class PoiModelToWorkWithLearnerWithLoss(TorchModel):
