@@ -37,7 +37,7 @@ class SceneGraphTrainer:
             self.scheduler2 = StepLR(self.optim2, step_size=15, gamma=0.3)
             self.scheduler3 = StepLR(self.optim3, step_size=15, gamma=0.3)
             self.scheduler4 = StepLR(self.optim4, step_size=15, gamma=0.3)
-        self.loss = CrossEntropyLoss(ignore_index=-1)
+        self.loss = CrossEntropyLoss()
         if type == 'attribute':
             self.loss = BCEWithLogitsLoss()
 
@@ -94,7 +94,10 @@ class SceneGraphTrainer:
         # if self.type == 'attribute':
         #     labels = labels.max(dim=-1)[1]
 
+
+
         #### check the accuracy between the original label and the predicted label
+        """
         new_predict1 = []
         new_predict2 = []
         new_predict3 = []
@@ -113,27 +116,65 @@ class SceneGraphTrainer:
             except KeyError:
                 tmp_label2 = -1
             new_predict2.append(tmp_label2)
-        for i3 in predicted3:
-            try:
-                i3 = str(i3.cpu().tolist())
-                tmp_label3 = total_index[self.meta_info[3][i3]]
-            except KeyError:
+        for id3, i3 in enumerate(predicted3):
+            if predicted2[id3] == -1:
                 tmp_label3 = -1
+            else:
+                try:
+                    i3 = str(i3.cpu().tolist())
+                    tmp_label3 = total_index[self.meta_info[3][i3]]
+                except KeyError:
+                    tmp_label3 = -1
             new_predict3.append(tmp_label3)
-        for i4 in predicted4:
-            try:
-                i4 = str(i4.cpu().tolist())
-                tmp_label4 = total_index[self.meta_info[4][i4]]
-            except KeyError:
+        for id4, i4 in enumerate(predicted4):
+            if predicted3[id4] == -1:
                 tmp_label4 = -1
+            else:
+                try:
+                    i4 = str(i4.cpu().tolist())
+                    tmp_label4 = total_index[self.meta_info[4][i4]]
+                except KeyError:
+                    tmp_label4 = -1
             new_predict4.append(tmp_label4)
-        
         new_resulsts = list(map(list, zip(*[new_predict1, new_predict2, new_predict3, new_predict4])))
         correct = 0
         for id, item in enumerate(new_resulsts):
             if labels[id] in item:
                 correct += 1
+        """
+        correct_count = 0
+        count1, count2, count3, count4 = 0, 0,0,0
+        
+        for each_example in range(predicted1.shape[0]):
+            if predicted1[each_example] == labels1[each_example]:
+                correct_count += 1
+            count1 += 1
+            if predicted2[each_example] == labels2[each_example]:
+                correct_count += 1
+            count2 += 1
+            if predicted2[each_example] == len(self.meta_info[2]):
+                continue
 
+            if predicted3[each_example]  == labels3[each_example]:
+                correct_count += 1
+            count3 += 1
+            if predicted3[each_example] == len(self.meta_info[3]):
+                continue
+
+            if predicted4[each_example] == labels4[each_example]:
+                correct_count += 1
+            count4 += 1
+            
+
+
+        # predicted2 = predicted2[torch.where(labels2 == len(self.meta_info[2]))[0]]
+        # labels2 = labels2[torch.where(labels2 == len(self.meta_info[2]))[0]]
+
+        # predicted3 = predicted3[torch.where(labels3 == len(self.meta_info[3]))[0]]
+        # labels3 = labels3[torch.where(labels3 == len(self.meta_info[3]))[0]]
+
+        # predicted4 = predicted4[torch.where(labels4 == len(self.meta_info[4]))[0]]
+        # labels4 = labels4[torch.where(labels4 == len(self.meta_info[4]))[0]]
 
         correct1 = (predicted1 == labels1).sum().item()
         correct2 = (predicted2 == labels2).sum().item()
@@ -143,7 +184,7 @@ class SceneGraphTrainer:
         accuracy2 = correct2 * 100. / len(labels2)
         accuracy3 = correct3 * 100. / len(labels3)
         accuracy4 = correct4 * 100. / len(labels4)
-        accuracy = correct * 100. / len(labels)
+        #accuracy = correct * 100. / len(labels)
 
         # print(res, accuracy)
 
@@ -163,8 +204,11 @@ class SceneGraphTrainer:
             self.optim4.zero_grad()
             loss4.backward()
             self.optim4.step()
+        
+        return loss1.item(), loss2.item(), loss3.item(), loss4.item(), accuracy1, accuracy2, accuracy3, accuracy4, \
+               correct_count, count1+count2+count3+count4
+      
 
-        return loss1.item(), loss2.item(), loss3.item(), loss4.item(), accuracy1, accuracy2, accuracy3, accuracy4, accuracy
 
     def _train_epoch(self):
         self.model1.train()
@@ -213,9 +257,10 @@ class SceneGraphTrainer:
         pbar2 = tqdm(self.val_data_loader)
         pbar3 = tqdm(self.val_data_loader)
         pbar4 = tqdm(self.val_data_loader)
-
+        total_correct_count = 0
+        total_count = 0
         for data in pbar1:
-            loss1, loss2, loss3, loss4, accuracy1, accuracy2, accuracy3, accuracy4, accuracy = self._pass(data, train=False)
+            loss1, loss2, loss3, loss4, accuracy1, accuracy2, accuracy3, accuracy4, correct_count, each_total = self._pass(data, train=False)
             losses1.append(loss1)
             losses2.append(loss2)
             losses3.append(loss3)
@@ -224,26 +269,25 @@ class SceneGraphTrainer:
             acc2.append(accuracy2)
             acc3.append(accuracy3)
             acc4.append(accuracy4)
-            acc.append(accuracy)
             pbar1.set_description('[loss1: %f]' % loss1)
             pbar2.set_description('[loss2: %f]' % loss2)
             pbar3.set_description('[loss3: %f]' % loss3)
             pbar4.set_description('[loss4: %f]' % loss4)
+            total_count += each_total
+            total_correct_count += correct_count
 
+        result = total_correct_count/total_count
+        print(result)
         return np.mean(losses1), np.mean(losses2), np.mean(losses3), np.mean(losses4),\
-                 np.mean(acc1), np.mean(acc2), np.mean(acc3), np.mean(acc4), np.mean(acc)
+                 np.mean(acc1), np.mean(acc2), np.mean(acc3), np.mean(acc4)
 
     def train(self):
         assert self.is_train
-        best_val_loss1 = np.inf
-        best_val_loss2 = np.inf
-        best_val_loss3 = np.inf
-        best_val_loss4 = np.inf
         for epoch in range(self.n_epochs):
             train_loss1, train_loss2, train_loss3, train_loss4, train_acc1,  \
                 train_acc2, train_acc3,  train_acc4 = self._train_epoch()
             val_loss1, val_loss2, val_loss3, val_loss4, val_acc1,  \
-                val_acc2, val_acc3,  val_acc4 = self._val_epoch()
+                val_acc2, val_acc3, val_acc4 = self._val_epoch()
             self.scheduler1.step()
             self.scheduler2.step()
             self.scheduler3.step()
@@ -310,10 +354,9 @@ class SceneGraphTrainer:
         assert not self.is_train
         #test_loss, test_acc = self._val_epoch()
         test_loss1, test_loss2, test_loss3, test_loss4, test_acc1,  \
-                test_acc2, test_acc3,  test_acc4, test_acc = self._val_epoch()
+                test_acc2, test_acc3,  test_acc4 = self._val_epoch()
         print('[test loss1: %.2f, acc1: %.2f] \n \
                [test loss2: %.2f, acc2: %.2f]\n \
               [test loss3: %.2f, acc3: %.2f] \n \
-               [test loss4: %.2f, acc4: %.2f] \n \
-                [acc: %.2f]' \
-        % (test_loss1, test_acc1,test_loss2, test_acc2,test_loss3, test_acc3,test_loss4, test_acc4, test_acc))
+               [test loss4: %.2f, acc4: %.2f] \n ' \
+        % (test_loss1, test_acc1,test_loss2, test_acc2,test_loss3, test_acc3,test_loss4, test_acc4))

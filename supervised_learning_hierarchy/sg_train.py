@@ -109,14 +109,13 @@ if __name__ == '__main__':
     parser.add_argument('--rel_glove_f', default=GQA_DIR+'/rela_gloves.pkl')
     parser.add_argument('--transe_f', default=GQA_DIR+'/kg_emb.pkl')
     parser.add_argument('--meta_f', default=DATA_ROOT+'/gqa_info.json')
-
-    parser.add_argument('--name1_path', default="/VL/space/zhan1624/VQAR-launcher/VQAR_all/VQAR/src/supervised_learning_hierarchy/data/rescources/new_label_data/labels/name1.json")
-    parser.add_argument('--name2_path', default="/VL/space/zhan1624/VQAR-launcher/VQAR_all/VQAR/src/supervised_learning_hierarchy/data/rescources/new_label_data/labels/name2.json")
-    parser.add_argument('--name3_path', default="/VL/space/zhan1624/VQAR-launcher/VQAR_all/VQAR/src/supervised_learning_hierarchy/data/rescources/new_label_data/labels/name3.json")
-    parser.add_argument('--name4_path', default="/VL/space/zhan1624/VQAR-launcher/VQAR_all/VQAR/src/supervised_learning_hierarchy/data/rescources/new_label_data/labels/name4.json")
-    parser.add_argument('--train_f', default="/VL/space/zhan1624/VQAR-launcher/VQAR_all/VQAR/src/supervised_learning_hierarchy/data/rescources/new_label_data/train.pickle")
-    parser.add_argument('--val_f', default="/VL/space/zhan1624/VQAR-launcher/VQAR_all/VQAR/src/supervised_learning_hierarchy/data/rescources/new_label_data/val.pickle")
-    parser.add_argument('--test_f', default="/VL/space/zhan1624/VQAR-launcher/VQAR_all/VQAR/src/supervised_learning_hierarchy/data/rescources/new_label_data/test.pickle")
+    parser.add_argument('--name1_path', default="/VL/space/zhan1624/VQAR-launcher/VQAR_all/VQAR/src/supervised_learning_joslin/joslin/rescources/new_label_data/labels/name1.json")
+    parser.add_argument('--name2_path', default="/VL/space/zhan1624/VQAR-launcher/VQAR_all/VQAR/src/supervised_learning_joslin/joslin/rescources/new_label_data/labels/name2.json")
+    parser.add_argument('--name3_path', default="/VL/space/zhan1624/VQAR-launcher/VQAR_all/VQAR/src/supervised_learning_joslin/joslin/rescources/new_label_data/labels/name3.json")
+    parser.add_argument('--name4_path', default="/VL/space/zhan1624/VQAR-launcher/VQAR_all/VQAR/src/supervised_learning_joslin/joslin/rescources/new_label_data/labels/name4.json")
+    parser.add_argument('--train_f', default="/VL/space/zhan1624/VQAR-launcher/VQAR_all/VQAR/src/supervised_learning_joslin/joslin/rescources/new_label_data/train.pickle")
+    parser.add_argument('--val_f', default="/VL/space/zhan1624/VQAR-launcher/VQAR_all/VQAR/src/supervised_learning_joslin/joslin/rescources/new_label_data/val.pickle")
+    parser.add_argument('--test_f', default="/VL/space/zhan1624/VQAR-launcher/VQAR_all/VQAR/src/supervised_learning_joslin/joslin/rescources/new_label_data/test.pickle")
     args = parser.parse_args()
 
     if not os.path.exists(args.model_dir):
