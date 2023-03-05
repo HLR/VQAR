@@ -155,15 +155,15 @@ class ClauseNTrainer():
             V = adj_mat.shape[0]
             # Creating a E * V sparse matrix
             adj_mat_S = csr_matrix(adj_mat)
-            EV_mat = torch.from_numpy(csr_matrix((E, V),dtype = np.int32).toarray())
+            EV_mat = torch.from_numpy(csr_matrix((V, E),dtype = np.float32).toarray())
             indices = adj_mat_S.nonzero()
             rows = indices[0]
             cols = indices[1]
             data = adj_mat_S.data
             for i in range(E):
-                EV_mat[i][rows[i]]=data[i]
-                EV_mat[i][cols[i]]=-data[i]
-            return EV_mat 
+                EV_mat[rows[i]][i]=data[i]
+                EV_mat[cols[i]][i]=-data[i]
+            return EV_mat
 
         matrix = np.zeros((self.CONCEPT_NUM, self.CONCEPT_NUM))
         for i in range(len(self.concepts)):

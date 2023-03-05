@@ -34,12 +34,11 @@ def reg_loss(model_lambda, model, exclude_names=set()):
 
 def violation_num(adj_mat, labels):
         # adj_mat is V*V, and labels is a 1*V vector , which V is number of image labels.
-        V_vec = torch.matmul(adj_mat,labels) # positive or zero=no_violaton, negative = violation
-        V_num=(V_vec<0).sum()
-        V_avg = V_num/len(V_vec)
-        
-        print(f'Violation scores, and Violation average: {V_vec},  {V_avg}')
-        return V_avg
+        V_vec = torch.matmul(labels, adj_mat) # B*E vector with {positive or zero}=no_violaton, {negative} = violation
+        V_num=torch.sum(V_vec<0, 1)
+        #V_avg = torch.mean(V_num.float())
+        #print(f'Violation scores, and Violation average: {V_vec},  {V_avg}')
+        return V_num
 
 def run_gbi(log_probs, model, adj_mat=None, is_correct=None):
     """
@@ -50,11 +49,11 @@ def run_gbi(log_probs, model, adj_mat=None, is_correct=None):
     is_correct: function with parameter datanode that returns whether or not the prediction is correct
     """
     #num_satisfied_l, num_constraints_l = get_constraints(node_l)
-    violation_num(adj_mat, log_probs)
-    num_satisfied_l, num_constraints_l = 2, 3
-
+    num_constraints_l = violation_num(adj_mat, log_probs)
+    #num_satisfied_l, num_constraints_l = 2, 3
+    ###Joslin: not sure what num_satisfied_l mean
     is_satisifed = 1 if num_satisfied_l == num_constraints_l else 0
-    log_probs = log_probs.sum()
+    log_probs = log_probs.sum(dim=1)
 
     model1, model2, model3, model4 = model['name1'], model['name2'], model['name3'], model['name4']
 
