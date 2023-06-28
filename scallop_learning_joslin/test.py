@@ -5,9 +5,6 @@ import io
 import sys
 from pstats import SortKey
 
-supervised_learning_path = os.path.abspath(os.path.join(
-    os.path.abspath(__file__), "../supervised_learning"))
-sys.path.insert(0, supervised_learning_path)
 
 common_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../.."))
 sys.path.insert(0, common_path)

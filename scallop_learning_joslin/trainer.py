@@ -37,7 +37,7 @@ from learning import get_batched_fact_probs, get_wmc
 from utils import auc_score, get_recall
 from debugger import debug_and_draw
 
-log_writer = SummaryWriter(logdir=cmd_args.model_dir+"/run")
+#log_writer = SummaryWriter(logdir=cmd_args.model_dir+"/run")
 
 class ClauseNTrainer():
 
@@ -56,12 +56,15 @@ class ClauseNTrainer():
 
         self.model_dir = model_dir
 
+        '''
         model_exists = self._model_exists(model_dir)
 
         if not model_exists:
             load_model_dir = None
         else:
             load_model_dir = model_dir
+        '''
+        load_model_dir = "/VL/space/zhan1624/VQAR-launcher/VQAR_all/VQAR/data/tadalog_model_v2/model_tadalog_c2_50000_top10_joslin_pre/"
 
         if train_data_loader is not None:
             self.train_data = train_data_loader
@@ -94,7 +97,6 @@ class ClauseNTrainer():
         self.wmc_funcs = {}
 
         # load dictionary from previous training results
-        
         self.sg_model = SceneGraphModel(
             feat_dim=cmd_args.feat_dim,
             n_names=meta_info['name']['num'],
@@ -145,7 +147,7 @@ class ClauseNTrainer():
                     self.schedulers['attr'] = StepLR(
                         self.optimizers['attr'], step_size=10, gamma=0.1)
 
-        #self.pool = mp.Pool(cmd_args.max_workers)
+        self.pool = mp.Pool(cmd_args.max_workers)
         # self.batch = cmd_args.trainer_batch
     
     def build_matirx(self):
@@ -367,23 +369,28 @@ class ClauseNTrainer():
             # print(datapoint["question"]["clauses"])
             correct = datapoint['question']['output']
             all_labels.append([1 if obj in correct else 0 for obj in datapoint['object_ids']])
-
-
         batched_tps, batched_probs, batched_torch_probs = get_batched_fact_probs(self.sg_model, batched_dp, self.idx2word, self.dl_inter, self.concepts, self.reinforce)
         args = [(dp, tps, probs, self.dl_inter) for current_id, (dp, tps, probs) in enumerate(zip(batched_dp, batched_tps, batched_probs))]
 
-        for probs, dp  in zip(batched_torch_probs, batched_dp):
-            name_log_probs = probs['log_name']
-            gbi_loss = infer_gbi.run_gbi(name_log_probs, self.sg_model.models, self.adj_matrix)
-            print('yue')
 
+        
+        start = time.time()
+        results = [self.pool.apply_async(get_wmc, arg) for arg in args]
+        
+        wmcs = [res.get(timeout=2000) for res in results]
+        end = time.time()
+        
+
+        '''
         start = time.time()
         #results = [self.pool.apply_async(get_wmc, arg) for arg in args]
-        results = [(get_wmc, arg) for arg in args]
         #wmcs = [res.get(timeout=2000) for res in results]
-        wmcs = [res for res in results]
-        end = time.time()
-    
+        results = [(get_wmc, arg) for arg in args]
+        wmcs = [(get_wmc, arg) for arg in args]
+
+        '''
+        
+
         aucs = []
         losses = []
         grads = []
@@ -393,12 +400,11 @@ class ClauseNTrainer():
             loss, auc, grad = self.loss_auc_grad(wmc_value, wmc_idxes, probs, correct_oids, all_oids, is_train)
             if auc >= 0:
                 aucs.append(auc)
-            name_log_probs = probs['log_name']
-            gbi_loss = infer_gbi.run_gbi(name_log_probs, self.sg_model.models)
-            losses.append(loss+gbi_loss)
+            losses.append(loss)
             grads.append(grad)
-     
+
         return aucs, losses
+     
 
     def _train_epoch(self, ct):
 
@@ -407,7 +413,7 @@ class ClauseNTrainer():
         losses = []
         rewards = []
 
-       # pbar = tqdm(self.train_data, total = self.train_data.batch_num)
+        pbar = tqdm(self.train_data, total = self.train_data.batch_num)
 
         for ct, datapoint in enumerate(self.train_data):
             if self.reinforce:
@@ -421,9 +427,7 @@ class ClauseNTrainer():
                     f'[loss: {np.array(losses).mean():.3f}, reward: {np.array(rewards).mean():.3f}, recall: {np.array(aucs).mean():.3f}]')
             else:
                 batch_auc, batch_loss = self._batch_pass(datapoint, True, is_train=True)
-                print(batch_loss)
-                import sys
-                sys.exit()
+            
                 # timeout, auc, loss = self._pass(datapoint, True)
                 aucs += [auc for auc in batch_auc if auc >= 0]
                 losses += batch_loss

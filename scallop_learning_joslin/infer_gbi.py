@@ -40,6 +40,13 @@ def violation_num(adj_mat, labels):
         #print(f'Violation scores, and Violation average: {V_vec},  {V_avg}')
         return V_num
 
+
+def reset(model):
+    for layer in model.children():
+        if hasattr(layer, 'reset_parameters'):
+            layer.reset_parameters()
+    return model
+
 def run_gbi(log_probs, model, adj_mat=None, is_correct=None):
     """
     Runs gradient-based inference on program. Prints pre- and post- accuracy/constraint violations.
@@ -51,8 +58,9 @@ def run_gbi(log_probs, model, adj_mat=None, is_correct=None):
     #num_satisfied_l, num_constraints_l = get_constraints(node_l)
     num_constraints_l = violation_num(adj_mat, log_probs)
     #num_satisfied_l, num_constraints_l = 2, 3
-    ###Joslin: not sure what num_satisfied_l mean
-    is_satisifed = 1 if num_satisfied_l == num_constraints_l else 0
+
+    #is_satisifed = 1 if num_satisfied_l == num_constraints_l else 0
+    is_satisifed = 0
     log_probs = log_probs.sum(dim=1)
 
     model1, model2, model3, model4 = model['name1'], model['name2'], model['name3'], model['name4']
@@ -62,10 +70,19 @@ def run_gbi(log_probs, model, adj_mat=None, is_correct=None):
     model_l3, c_opt = get_lambda(model3, lr=1e-1)
     model_l4, c_opt = get_lambda(model4, lr=1e-1)
 
+    model_l1 = reset(model1)
+
     # constraint loss: NLL * binary satisfaction + regularization loss
     # reg loss is calculated based on L2 distance of weights between optimized model and original weights
-    c_loss = -1 * log_probs * (1-is_satisifed) + reg_loss(model_l1, model1)+ reg_loss(model_l2, model2) + \
+    # c_loss = -1 * log_probs * (1-is_satisifed) + reg_loss(model_l1, model1)+ reg_loss(model_l2, model2) + \
+    #         reg_loss(model_l3, model3) + reg_loss(model_l4, model4)
+    
+    c_loss = reg_loss(model_l1, model1)+ reg_loss(model_l2, model2) + \
             reg_loss(model_l3, model3) + reg_loss(model_l4, model4)
+    
+
+    c_loss.backward()
+    c_opt.step()
     
     return c_loss
 
@@ -82,5 +99,4 @@ def run_gbi(log_probs, model, adj_mat=None, is_correct=None):
 
     #     break
 
-    # c_loss.backward()
-    # c_opt.step()
+   
